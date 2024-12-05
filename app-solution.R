@@ -139,3 +139,4 @@ shinyApp(
     output$n_snowy_days <- renderText(sum(weather_day_conditions()$snow))
   }
 )
+
