@@ -63,16 +63,16 @@ shinyApp(
   ),
   server = function(input, output, session) {
 
-    # output for selected city
+    # text output for selected city
     output$city <- renderText({ str_to_upper(input$city) })
 
-    # weather for selected city
+    # reactive weather data frame for selected city
     weather_city <- reactive({
       weather |>
         filter(City %in% input$city)
     })
 
-    # weather variables that are numeric and not constant for selected city
+    # reactive weather variables that are numeric and not constant for selected city
     weather_vars <- reactive({
       weather_city() |>
         select(where(is.numeric)) |>
@@ -80,7 +80,7 @@ shinyApp(
         names()
     })
 
-    # update the select input when weather_vars changes
+    # dynamically update the select input when weather_vars changes
     observe({
       updateSelectInput(inputId = "var", choices = weather_vars())
     })
@@ -118,7 +118,7 @@ shinyApp(
         select(City, DateTime, input$var)
     })
 
-    # calculate value boxes
+    # reactive data frame for calculating values for value boxes
     weather_day_conditions <- reactive({
       weather_city() |>
         mutate(day = yday(DateTime)) |>
@@ -133,6 +133,7 @@ shinyApp(
         )
     })
 
+    # text output for values for value boxes
     output$n_clear_days <- renderText(sum(weather_day_conditions()$clear))
     output$n_rainy_days <- renderText(sum(weather_day_conditions()$rain))
     output$n_snowy_days <- renderText(sum(weather_day_conditions()$snow))
