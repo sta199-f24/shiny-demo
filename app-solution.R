@@ -14,7 +14,7 @@ weather <- read_csv("data/weather.csv")
 
 shinyApp(
   ui = page_sidebar(
-    title = "Weather Forecasts",
+    title = "Weather forecast",
     theme = bs_theme(bootswatch = "litera"),
     sidebar = sidebar(
       selectInput(
@@ -25,28 +25,34 @@ shinyApp(
       selectInput(
         "var", "Select a variable",
         choices = c()
-      )
+      ),
+      hr(),
+      p("The data come from the Visual Crossing API.")
     ),
     layout_column_wrap(
       value_box(
-        title = "Number of clear",
+        title = "City",
+        value = textOutput("city"),
+        showcase = bs_icon("geo-fill"),
+        p("Dec 1 - 18, 2024"),
+        theme = "info"
+      ),
+      value_box(
+        title = "Number of clear days",
         value = textOutput("n_clear_days"),
         showcase = bs_icon("sun-fill"),
-        p("days"),
         theme = "yellow"
       ),
       value_box(
-        title = "Number of rainy",
+        title = "Number of rainy days",
         value = textOutput("n_rainy_days"),
         showcase = bs_icon("cloud-drizzle-fill"),
-        p("days"),
         theme = "blue"
       ),
       value_box(
-        title = "Number of snowy",
+        title = "Number of snowy days",
         value = textOutput("n_snowy_days"),
         showcase = bs_icon("cloud-snow-fill"),
-        p("days"),
         theme = "light"
       )
     ),
@@ -56,6 +62,9 @@ shinyApp(
     )
   ),
   server = function(input, output, session) {
+
+    # output for selected city
+    output$city <- renderText({ str_to_upper(input$city) })
 
     # weather for selected city
     weather_city <- reactive({
@@ -82,9 +91,25 @@ shinyApp(
       weather_city() |>
         ggplot(aes_string(x = "DateTime", y = input$var)) +
         geom_line(linewidth = 1) +
-        labs(title = paste(input$city, "-", input$var)) +
-        scale_x_datetime(date_breaks = "week", date_labels = "%b %d") +
-        theme_bw(base_size = 14)
+        labs(title = input$var) +
+        scale_x_datetime(
+          date_breaks = "week",
+          date_minor_breaks = "day",
+          date_labels = "%a, %b %d"
+        ) +
+        theme_bw(base_size = 14) +
+        geom_vline(
+          xintercept = now(),
+          linetype = "dotted", linewidth = 0.8,
+          color = "#c95c54"
+        ) +
+        geom_label(
+          x = now(),
+          y = max(weather_city() |> select(input$var)) * 0.9,
+          label = "today",
+          color = "#c95c54",
+          size = 6
+        )
     })
 
     # make table
@@ -94,8 +119,22 @@ shinyApp(
     })
 
     # calculate value boxes
-    output$n_clear_days <- renderText(weather_city() |> mutate(day = day(DateTime)) |> relocate(day) |> group_by(day) |> distinct(Conditions) |> pull(Conditions) |> str_count("Clear") |> sum())
-    output$n_rainy_days <- renderText(weather_city() |> mutate(day = day(DateTime)) |> relocate(day) |> group_by(day) |> distinct(Conditions) |> pull(Conditions) |> str_count("Rain") |> sum())
-    output$n_snowy_days <- renderText(weather_city() |> mutate(day = day(DateTime)) |> relocate(day) |> group_by(day) |> distinct(Conditions) |> pull(Conditions) |> str_count("Snow") |> sum())
+    weather_day_conditions <- reactive({
+      weather_city() |>
+        mutate(day = yday(DateTime)) |>
+        select(day, Conditions) |>
+        group_by(day) |>
+        distinct(Conditions) |>
+        summarize(day_conditions = glue_collapse(Conditions, sep = ", ")) |>
+        mutate(
+          clear = str_detect(day_conditions, "Clear"),
+          rain = str_detect(day_conditions, "Rain"),
+          snow = str_detect(day_conditions, "Snow")
+        )
+    })
+
+    output$n_clear_days <- renderText(sum(weather_day_conditions()$clear))
+    output$n_rainy_days <- renderText(sum(weather_day_conditions()$rain))
+    output$n_snowy_days <- renderText(sum(weather_day_conditions()$snow))
   }
 )
