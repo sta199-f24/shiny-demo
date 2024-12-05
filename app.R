@@ -17,7 +17,7 @@ shinyApp(
     title = "Weather Forecasts"
     # theme selection goes here
 
-    # sidebar widgets go here
+    # sidebar widgets and data reference go here
 
     # value boxes go here
 
