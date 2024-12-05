@@ -14,7 +14,7 @@ weather <- read_csv("data/weather.csv")
 
 shinyApp(
   ui = page_sidebar(
-    title = "Weather Forecasts"
+    title = "Weather forecast"
     # theme selection goes here
 
     # sidebar widgets and data reference go here
